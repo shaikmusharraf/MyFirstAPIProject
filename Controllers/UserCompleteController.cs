@@ -1,3 +1,5 @@
+using System.Data;
+using Dapper;
 using DotnetAPI.Data;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,40 +27,58 @@ public class UserCompleteController : ControllerBase
     // public IActionResult Test()
     public IEnumerable<UserComplete> GetUsers(int userId, bool isActive)
     {
+        DynamicParameters sqlParameters = new DynamicParameters();
         string sql = @"EXEC  [TutorialAppSchema].[spUsers_Get]";
 
         string parameters = "";
 
         if (userId != 0)
         {
-            parameters = parameters + " @UserId = " + userId.ToString();
+            parameters = parameters + " @UserId =@UserIdParameter";
+            sqlParameters.Add("@UserIdParameter", userId, DbType.Int32);
         }
         if (isActive)
         {
-            parameters = parameters + " ,@Active = " + isActive.ToString();
+            parameters = parameters + " ,@Active = @ActiveParameter";
+            sqlParameters.Add("@ActiveParameter", isActive, DbType.Boolean);
         }
-        sql += parameters.Substring(1);
+        if (parameters.Length > 0)
+        {
+            sql += parameters.Substring(1);
+        }
         System.Console.WriteLine(sql);
-        IEnumerable<UserComplete> users = _dapper.LoadData<UserComplete>(sql);
+        IEnumerable<UserComplete> users = _dapper.LoadDatawithParameters<UserComplete>(sql, sqlParameters);
         return users;
     }
 
     [HttpPut("UpsertUser")]
-    public IActionResult EditUser(UserComplete user)
+    public IActionResult UpsertUser(UserComplete user)
     {
+        DynamicParameters sqlParameters = new DynamicParameters();
         string sql = @"
             EXEC [TutorialAppSchema].[spUser_Upsert]
-                @FirstName ='" + user.FirstName +
-                "', @LastName ='" + user.LastName +
-                "', @Email ='" + user.Email +
-                "', @Gender ='" + user.Gender +
-                "', @Active = '" + user.Active +
-                "', @JobTitle = '" + user.JobTitle +
-                "', @Department = '" + user.Department +
-                "', @Salary = '" + user.Salary +
-                "', @UserId =" + user.UserId;
+                @FirstName =@FirstNameParameter
+                , @LastName =@LastNameParameter
+                , @Email =@EmailParameter
+                , @Gender =@GenderParameter
+                , @Active = @ActiveParameter
+                , @JobTitle =@JobTitleParameter  
+                , @Department =@DepartmentParameter 
+                , @Salary = @SalaryParameter
+                , @UserId =@UserIdParameter";
         System.Console.WriteLine(sql);
-        if (_dapper.ExecuteSQL(sql))
+        sqlParameters.Add("@FirstNameParameter", user.FirstName, DbType.String);
+        sqlParameters.Add("@LastNameParameter", user.LastName, DbType.String);
+        sqlParameters.Add("@EmailParameter", user.Email, DbType.String);
+        sqlParameters.Add("@GenderParameter", user.Gender, DbType.String);
+        sqlParameters.Add("@ActiveParameter", user.Active, DbType.Boolean);
+        sqlParameters.Add("@JobTitleParameter", user.JobTitle, DbType.String);
+        sqlParameters.Add("@DepartmentParameter", user.Department, DbType.String);
+        sqlParameters.Add("@SalaryParameter", user.Salary, DbType.Decimal);
+        sqlParameters.Add("@UserIdParameter", user.UserId, DbType.Int32);
+
+
+        if (_dapper.ExecuteSQLwithParameters(sql,sqlParameters))
         {
             return Ok();
         }
@@ -71,9 +91,13 @@ public class UserCompleteController : ControllerBase
     [HttpDelete("DeleteUser/{userId}")]
     public IActionResult DeleteUser(int userId)
     {
-        string sql = @" EXEC [TutorialAppSchema].[spUser_Delete] @UserId = " + userId.ToString();
+        string sql = @" EXEC [TutorialAppSchema].[spUser_Delete] @UserId = @UserIdParameter";
+
+        DynamicParameters sqlParameters = new DynamicParameters();
+        sqlParameters.Add("@UserIdParameter", userId, DbType.Int32);
+
         System.Console.WriteLine(sql);
-        if (_dapper.ExecuteSQL(sql))
+        if (_dapper.ExecuteSQLwithParameters(sql,sqlParameters))
         {
             return Ok();
         }
