@@ -1,9 +1,11 @@
 // using System.Security.Cryptography;
 using System.Data;
 using System.IdentityModel.Tokens.Jwt;
+using System.Runtime.InteropServices;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using AutoMapper;
 using Dapper;
 using DotnetAPI.Data;
 using DotnetAPI.Dtos;
@@ -23,13 +25,21 @@ namespace DotnetAPI.Controller
     public class AuthController : ControllerBase
     {
         private readonly DataContextDapper _dapper;
+        private readonly ReusableSql _reusableSql;
         // private readonly IConfiguration _config;
         private readonly AuthHelper _authHelper;
+        private readonly IMapper _mapper;
         public AuthController(IConfiguration config)
         {
             _dapper = new DataContextDapper(config);
             // _config = config;
             _authHelper = new AuthHelper(config);
+            _reusableSql = new ReusableSql(config);
+            _mapper = new Mapper(new MapperConfiguration(cfg =>
+                {
+                    cfg.CreateMap<UserForRegistrationDto, UserComplete>();
+                }
+            ));
         }
 
         [AllowAnonymous]
@@ -77,15 +87,19 @@ namespace DotnetAPI.Controller
 
                     if (_authHelper.SetPassword(userForSetPwd))
                     {
-                        string sqladdUser = @"EXEC [TutorialAppSchema].[spUser_Upsert]
-                    @FirstName ='" + userForRegistration.FirstName +
-                    "', @LastName ='" + userForRegistration.LastName +
-                    "', @Email ='" + userForRegistration.Email +
-                    "', @Gender ='" + userForRegistration.Gender +
-                    "', @Active = 1" +
-                    ", @JobTitle = '" + userForRegistration.JobTitle +
-                    "', @Department = '" + userForRegistration.Department +
-                    "', @Salary = '" + userForRegistration.Salary + "'";
+                        UserComplete userComplete = _mapper.Map<UserComplete>(userForRegistration);
+                        userComplete.Active= true;
+
+
+                    //     string sqladdUser = @"EXEC [TutorialAppSchema].[spUser_Upsert]
+                    // @FirstName ='" + userForRegistration.FirstName +
+                    // "', @LastName ='" + userForRegistration.LastName +
+                    // "', @Email ='" + userForRegistration.Email +
+                    // "', @Gender ='" + userForRegistration.Gender +
+                    // "', @Active = 1" +
+                    // ", @JobTitle = '" + userForRegistration.JobTitle +
+                    // "', @Department = '" + userForRegistration.Department +
+                    // "', @Salary = '" + userForRegistration.Salary + "'";
 
 
                         // string sqladdUser = @"
@@ -102,7 +116,7 @@ namespace DotnetAPI.Controller
                         //     "', '" + userForRegistration.Gender +
                         //     "',1)";
 
-                        if (_dapper.ExecuteSQL(sqladdUser))
+                        if (_reusableSql.UpsertUser(userComplete))
                         {
                             return Ok();
                         }
@@ -136,7 +150,7 @@ namespace DotnetAPI.Controller
             // SqlParameter emailParameter = new SqlParameter("@EmailParam", SqlDbType.VarChar);
             // emailParameter.Value = userForLogin.Email;
             // sqlParameters.Add(emailParameter);
-            sqlParameters.Add("@EmailParam",userForLogin.Email,DbType.String);
+            sqlParameters.Add("@EmailParam", userForLogin.Email, DbType.String);
 
 
             // string sqlForHashandSalt = @"SELECT
@@ -153,7 +167,7 @@ namespace DotnetAPI.Controller
                     return StatusCode(401, "Incorrect Password!");
                 }
             }
-            string userIdSql = @"SELECT UserId from [TutorialAppSchema].[Users] WHERE Email = '"+userForLogin.Email+"'";
+            string userIdSql = @"SELECT UserId from [TutorialAppSchema].[Users] WHERE Email = '" + userForLogin.Email + "'";
             int userId = _dapper.LoadDataSingle<int>(userIdSql);
 
             return Ok(new Dictionary<string, string>{
