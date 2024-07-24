@@ -13,9 +13,9 @@
     <PackageReference Include="Microsoft.aspnetcore.authentication.jwtbearer" Version="8.0.7" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.2" />
     <PackageReference Include="microsoft.data.sqlclient" Version="5.2.1" />
-    <PackageReference Include="microsoft.entityframeworkcore" Version="8.0.6" />
+    <!-- <PackageReference Include="microsoft.entityframeworkcore" Version="8.0.6" />
     <PackageReference Include="microsoft.entityframeworkcore.Relational" Version="8.0.6" />
-    <PackageReference Include="microsoft.entityframeworkcore.Sqlserver" Version="8.0.6" />
+    <PackageReference Include="microsoft.entityframeworkcore.Sqlserver" Version="8.0.6" /> -->
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
   </ItemGroup>
 
